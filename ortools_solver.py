@@ -1,8 +1,13 @@
 from typing import List
 import sys
+import csv
+import os
+import time
+import math
+
+import matplotlib.pyplot as plt
 
 from ortools.constraint_solver import routing_enums_pb2, pywrapcp
-
 from parser import load_cvrp_instance
 
 # ---------------------------------------------------------
@@ -18,9 +23,38 @@ DEPOT = 0
 
 # OR-Tools butuh demand integer → kita scale
 DEMAND_SCALE = 100  # 1 unit = 0.01 di data asli
-
 DEMAND_INT = [int(round(d * DEMAND_SCALE)) for d in DEMAND]
 CAPACITY_INT = int(round(CAPACITY * DEMAND_SCALE))
+
+
+# ---------------------------------------------------------
+# Visualisasi rute (layout lingkaran sederhana)
+# ---------------------------------------------------------
+def plot_routes(routes: List[List[int]], title: str, filename: str):
+    xs = []
+    ys = []
+    for i in range(N):
+        angle = 2 * math.pi * i / N
+        xs.append(math.cos(angle))
+        ys.append(math.sin(angle))
+
+    plt.figure(figsize=(6, 6))
+    plt.scatter(xs, ys)
+
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        plt.text(x, y, str(i), fontsize=8, ha="center", va="center")
+
+    for r in routes:
+        rx = [xs[node] for node in r]
+        ry = [ys[node] for node in r]
+        plt.plot(rx, ry, marker="o")
+
+    plt.title(title)
+    plt.axis("equal")
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"[OR-Tools] Route plot saved to {filename}")
 
 
 # ---------------------------------------------------------
@@ -142,35 +176,142 @@ def analyze_routes(routes: List[List[int]]):
 if __name__ == "__main__":
     print(f"Using instance file: {INSTANCE_FILE}")
 
-    result = solve_with_ortools(num_vehicles=1, time_limit_sec=30)
+    # --- berapa kali mau di-run (num_runs) dari CLI ---
+    # Contoh: python ortools_solver.py 1_FaridFajar.vrp 5
+    NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+    print(f"Number of OR-Tools runs: {NUM_RUNS}")
 
-    if result is None:
-        exit(0)
+    costs = []
+    times = []
+    best_result = None
+    best_run_idx = None
 
-    routes = result["routes"]
-    total_distance = result["total_distance"]
+    for r in range(NUM_RUNS):
+        print(f"\n=== OR-TOOLS RUN {r+1}/{NUM_RUNS} ===")
+        start_time = time.perf_counter()
+        result = solve_with_ortools(num_vehicles=1, time_limit_sec=30)
+        end_time = time.perf_counter()
+        solve_time_sec = end_time - start_time
 
-    print("\n=== OR-TOOLS RESULT ===")
-    print("Instance:", INSTANCE_FILE)
-    print("Objective (total distance):", total_distance)
+        if result is None:
+            print("No solution in this run.")
+            continue
 
-    stats = analyze_routes(routes)
+        total_distance = result["total_distance"]
+        routes = result["routes"]
+
+        print(f"Run {r+1}: objective = {total_distance}, time = {solve_time_sec:.4f} s")
+
+        costs.append(total_distance)
+        times.append(solve_time_sec)
+
+        if best_result is None or total_distance < best_result["total_distance"]:
+            best_result = {
+                "routes": routes,
+                "total_distance": total_distance,
+                "solve_time": solve_time_sec,
+            }
+            best_run_idx = r + 1
+
+    if best_result is None:
+        print("No solution found in any run.")
+        sys.exit(0)
+
+    best_cost = best_result["total_distance"]
+    avg_cost = sum(costs) / len(costs)
+    worst_cost = max(costs)
+    best_solve_time = best_result["solve_time"]
+    avg_solve_time = sum(times) / len(times)
+
+    print("\n=== OR-TOOLS BEST RUN ===")
+    print(f"Instance: {INSTANCE_FILE}")
+    print(f"Best cost      : {best_cost}")
+    print(f"Best run index : {best_run_idx}")
+    print(f"Best solve time: {best_solve_time:.4f} s")
+
+    print("\n=== OR-TOOLS SUMMARY OVER RUNS ===")
+    print(f"Costs per run : {costs}")
+    print(f"Avg cost      : {avg_cost}")
+    print(f"Worst cost    : {worst_cost}")
+    print(f"Avg time (sec): {avg_solve_time:.4f}")
+
+    # Analisis & visualisasi untuk rute terbaik saja
+    stats = analyze_routes(best_result["routes"])
 
     # ---------- RINGKASAN SATU BARIS (ORTOOLS_SUMMARY) ----------
-    num_routes = len(routes)
+    num_routes = len(best_result["routes"])
     num_nodes = N
     num_customers = N - 1
     total_demand = stats["total_demand"]
 
-    route_strings = ["-".join(str(node) for node in r) for r in routes]
+    route_strings = ["-".join(str(node) for node in r) for r in best_result["routes"]]
     route_str = "/".join(route_strings)
 
-    print("\nORTOOLS_SUMMARY|"
-          f"{INSTANCE_FILE}|"
-          f"{total_distance}|"
-          f"{num_routes}|"
-          f"{num_nodes}|"
-          f"{num_customers}|"
-          f"{CAPACITY}|"
-          f"{total_demand:.2f}|"
-          f"{route_str}")
+    line_text = (
+        "ORTOOLS_SUMMARY|"
+        f"{INSTANCE_FILE}|"
+        f"{best_cost}|"
+        f"{avg_cost}|"
+        f"{worst_cost}|"
+        f"{NUM_RUNS}|"
+        f"{best_run_idx}|"
+        f"{num_routes}|"
+        f"{num_nodes}|"
+        f"{num_customers}|"
+        f"{CAPACITY}|"
+        f"{total_demand:.2f}|"
+        f"{route_str}|"
+        f"{best_solve_time:.4f}|"
+        f"{avg_solve_time:.4f}"
+    )
+
+    print("\n" + line_text)
+
+    # ---------- SIMPAN KE FILE <basename>_ortools_summary.csv ----------
+    base_name = os.path.splitext(os.path.basename(INSTANCE_FILE))[0]
+    summary_file = f"{base_name}_ortools_summary.csv"
+    file_exists = os.path.exists(summary_file)
+
+    header = [
+        "instance_file",
+        "best_cost",
+        "avg_cost",
+        "worst_cost",
+        "num_runs",
+        "best_run",
+        "num_routes",
+        "num_nodes",
+        "num_customers",
+        "capacity",
+        "total_demand",
+        "route",
+        "best_solve_time_sec",
+        "avg_solve_time_sec",
+    ]
+
+    row = [
+        INSTANCE_FILE,
+        str(best_cost),
+        f"{avg_cost:.2f}",
+        str(worst_cost),
+        str(NUM_RUNS),
+        str(best_run_idx),
+        str(num_routes),
+        str(num_nodes),
+        str(num_customers),
+        str(CAPACITY),
+        f"{total_demand:.2f}",
+        route_str,
+        f"{best_solve_time:.4f}",
+        f"{avg_solve_time:.4f}",
+    ]
+
+    with open(summary_file, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(header)
+        writer.writerow(row)
+
+    # ---------- PLOT RUTE TERBAIK ----------
+    plot_filename = f"{base_name}_ortools_route.png"
+    plot_routes(best_result["routes"], f"OR-Tools Best Route - {INSTANCE_FILE}", plot_filename)

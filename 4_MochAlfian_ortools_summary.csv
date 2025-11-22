@@ -1,0 +1,2 @@
+instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,num_nodes,num_customers,capacity,total_demand,route,best_solve_time_sec,avg_solve_time_sec
+4_MochAlfian.vrp,22449,22449.00,22449,5,1,1,25,24,30.0,4.61,0-15-8-21-6-23-5-12-13-24-10-9-19-20-3-18-1-14-17-4-7-11-16-2-22-0,30.0127,30.0036

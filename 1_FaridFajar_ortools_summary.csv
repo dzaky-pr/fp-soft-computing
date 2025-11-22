@@ -1,0 +1,2 @@
+instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,num_nodes,num_customers,capacity,total_demand,route,best_solve_time_sec,avg_solve_time_sec
+1_FaridFajar.vrp,18592,18592.80,18593,5,1,1,45,44,30.0,3.91,0-37-2-11-6-10-5-4-8-42-40-13-29-15-14-41-36-12-34-9-21-24-35-20-3-30-33-17-27-23-26-1-25-31-16-7-39-28-18-38-22-32-19-44-43-0,30.0038,30.0017

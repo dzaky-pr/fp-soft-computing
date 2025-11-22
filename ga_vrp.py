@@ -1,6 +1,12 @@
 import random
 import sys
+import csv
+import os
+import time
+import math
 from typing import List, Dict, Any
+
+import matplotlib.pyplot as plt
 
 from parser import load_cvrp_instance
 
@@ -173,6 +179,40 @@ def two_opt(chromosome: List[int]) -> List[int]:
 
 
 # --------------------------------------------------------------------
+# Visualisasi rute (layout lingkaran sederhana)
+# --------------------------------------------------------------------
+def plot_routes(routes: List[List[int]], title: str, filename: str):
+    # letakkan node 0..N-1 di lingkaran
+    xs = []
+    ys = []
+    for i in range(N):
+        angle = 2 * math.pi * i / N
+        xs.append(math.cos(angle))
+        ys.append(math.sin(angle))
+
+    plt.figure(figsize=(6, 6))
+    # titik
+    plt.scatter(xs, ys)
+
+    # label node
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        plt.text(x, y, str(i), fontsize=8, ha="center", va="center")
+
+    # gambar rute
+    for r in routes:
+        rx = [xs[node] for node in r]
+        ry = [ys[node] for node in r]
+        plt.plot(rx, ry, marker="o")
+
+    plt.title(title)
+    plt.axis("equal")
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"[GA] Route plot saved to {filename}")
+
+
+# --------------------------------------------------------------------
 # Genetic Algorithm utama
 # --------------------------------------------------------------------
 def genetic_algorithm(
@@ -283,7 +323,7 @@ def multi_run(num_runs: int = 10, **ga_kwargs):
     for r in range(num_runs):
         seed = 100 + r
         random.seed(seed)
-        print(f"\n=== RUN {r+1} (seed={seed}) ===")
+        print(f"\n=== RUN {r+1}/{num_runs} (seed={seed}) ===")
         best = genetic_algorithm(**ga_kwargs)
         fitnesses.append(best["fitness"])
 
@@ -312,8 +352,16 @@ def multi_run(num_runs: int = 10, **ga_kwargs):
 if __name__ == "__main__":
     print(f"Using instance file: {INSTANCE_FILE}")
 
+    # --- berapa kali mau di-run (num_runs) dari CLI ---
+    # Contoh: python ga_vrp.py 1_FaridFajar.vrp 10
+    NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    print(f"Number of GA runs: {NUM_RUNS}")
+
+    # --- ukur waktu eksekusi multi_run ---
+    start_time = time.perf_counter()
+
     best_overall, fitnesses = multi_run(
-        num_runs=5,                 # boleh dinaikkan ke 10 kalau mau
+        num_runs=NUM_RUNS,
         generations=300,
         pop_size=150,
         cx_prob=0.8,
@@ -324,6 +372,13 @@ if __name__ == "__main__":
         log_every=50,
     )
 
+    end_time = time.perf_counter()
+    total_time_sec = end_time - start_time
+    avg_time_per_run_sec = total_time_sec / NUM_RUNS
+
+    print(f"\nTotal execution time (multi_run): {total_time_sec:.4f} s")
+    print(f"Average time per run            : {avg_time_per_run_sec:.4f} s")
+
     print("\n=== BEST OVERALL SOLUTION ===")
     print("Instance:", INSTANCE_FILE)
     print("Best fitness:", best_overall["fitness"])
@@ -333,9 +388,8 @@ if __name__ == "__main__":
     stats = analyze_solution(best_overall["chrom"])
 
     # ---------- RINGKASAN SATU BARIS (GA_SUMMARY) ----------
-    num_runs = len(fitnesses)
     best_cost = best_overall["fitness"]
-    avg_cost = sum(fitnesses) / num_runs
+    avg_cost = sum(fitnesses) / NUM_RUNS
     worst_cost = max(fitnesses)
     best_run = best_overall["run"]
     best_seed = best_overall["seed"]
@@ -352,18 +406,77 @@ if __name__ == "__main__":
 
     chrom_str = "-".join(str(c) for c in best_overall["chrom"])
 
-    print("\nGA_SUMMARY|"
-          f"{INSTANCE_FILE}|"
-          f"{best_cost:.2f}|"
-          f"{avg_cost:.2f}|"
-          f"{worst_cost:.2f}|"
-          f"{num_runs}|"
-          f"{best_run}|"
-          f"{best_seed}|"
-          f"{num_routes}|"
-          f"{num_nodes}|"
-          f"{num_customers}|"
-          f"{CAPACITY}|"
-          f"{total_demand:.2f}|"
-          f"{best_route_str}|"
-          f"{chrom_str}")
+    line_text = (
+        "GA_SUMMARY|"
+        f"{INSTANCE_FILE}|"
+        f"{best_cost:.2f}|"
+        f"{avg_cost:.2f}|"
+        f"{worst_cost:.2f}|"
+        f"{NUM_RUNS}|"
+        f"{best_run}|"
+        f"{best_seed}|"
+        f"{num_routes}|"
+        f"{num_nodes}|"
+        f"{num_customers}|"
+        f"{CAPACITY}|"
+        f"{total_demand:.2f}|"
+        f"{best_route_str}|"
+        f"{chrom_str}|"
+        f"{total_time_sec:.4f}|"
+        f"{avg_time_per_run_sec:.4f}"
+    )
+
+    print("\n" + line_text)
+
+    # ---------- SIMPAN KE FILE <basename>_ga_summary.csv ----------
+    base_name = os.path.splitext(os.path.basename(INSTANCE_FILE))[0]
+    summary_file = f"{base_name}_ga_summary.csv"
+    file_exists = os.path.exists(summary_file)
+
+    header = [
+        "instance_file",
+        "best_cost",
+        "avg_cost",
+        "worst_cost",
+        "num_runs",
+        "best_run",
+        "best_seed",
+        "num_routes",
+        "num_nodes",
+        "num_customers",
+        "capacity",
+        "total_demand",
+        "best_route",
+        "chromosome",
+        "total_time_sec",
+        "avg_time_per_run_sec",
+    ]
+
+    row = [
+        INSTANCE_FILE,
+        f"{best_cost:.2f}",
+        f"{avg_cost:.2f}",
+        f"{worst_cost:.2f}",
+        str(NUM_RUNS),
+        str(best_run),
+        str(best_seed),
+        str(num_routes),
+        str(num_nodes),
+        str(num_customers),
+        str(CAPACITY),
+        f"{total_demand:.2f}",
+        best_route_str,
+        chrom_str,
+        f"{total_time_sec:.4f}",
+        f"{avg_time_per_run_sec:.4f}",
+    ]
+
+    with open(summary_file, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(header)
+        writer.writerow(row)
+
+    # ---------- PLOT RUTE TERBAIK ----------
+    plot_filename = f"{base_name}_ga_route.png"
+    plot_routes(routes, f"GA Best Route - {INSTANCE_FILE}", plot_filename)
