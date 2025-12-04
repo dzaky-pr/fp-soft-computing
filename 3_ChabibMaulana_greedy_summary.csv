@@ -1,2 +1,0 @@
-instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,capacity,best_route,best_time_sec,avg_time_sec
-3_ChabibMaulana.vrp,48244.00,48244.00,48244.00,5,1,1,30.0,0-3-10-21-28-30-1-14-18-4-26-38-8-31-2-33-13-39-7-6-15-32-22-34-20-11-24-37-16-9-17-23-36-19-29-35-12-5-25-27-0,0.0001,0.0001

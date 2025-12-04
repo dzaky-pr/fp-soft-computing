@@ -4,7 +4,7 @@ import csv
 import os
 import time
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import matplotlib.pyplot as plt
 
@@ -224,14 +224,26 @@ def genetic_algorithm(
     use_two_opt: bool = True,
     two_opt_prob: float = 0.3,
     log_every: int = 50,
+    time_limit_sec: Optional[float] = None,
 ):
     """
     Jalankan GA untuk instance CVRP/TSP dari file .vrp.
+    Jika time_limit_sec tidak None, GA akan berhenti jika waktu per run
+    melebihi time_limit_sec (fairness vs Tabu & OR-Tools).
     """
+    start_time = time.perf_counter()
+
     population = init_population(pop_size)
     best = min(population, key=lambda ind: ind["fitness"])
 
     for gen in range(generations):
+        # cek batas waktu per run
+        if time_limit_sec is not None:
+            elapsed = time.perf_counter() - start_time
+            if elapsed >= time_limit_sec:
+                print(f"[GA] Time limit reached at generation {gen}")
+                break
+
         new_population = []
 
         # Elitism: copy beberapa individu terbaik langsung ke generasi baru
@@ -311,11 +323,13 @@ def analyze_solution(chromosome: List[int]):
 # --------------------------------------------------------------------
 # Multi-run untuk statistik GA
 # --------------------------------------------------------------------
-def multi_run(num_runs: int = 10, **ga_kwargs):
+def multi_run(num_runs: int = 10, time_limit_sec: Optional[float] = None, **ga_kwargs):
     """
     Jalankan GA berkali-kali (dengan seed berbeda) untuk lihat:
     - best fitness per run
     - best overall
+
+    time_limit_sec: batas waktu per run, diteruskan ke genetic_algorithm
     """
     best_overall = None
     fitnesses = []
@@ -324,7 +338,7 @@ def multi_run(num_runs: int = 10, **ga_kwargs):
         seed = 100 + r
         random.seed(seed)
         print(f"\n=== RUN {r+1}/{num_runs} (seed={seed}) ===")
-        best = genetic_algorithm(**ga_kwargs)
+        best = genetic_algorithm(time_limit_sec=time_limit_sec, **ga_kwargs)
         fitnesses.append(best["fitness"])
 
         if best_overall is None or best["fitness"] < best_overall["fitness"]:
@@ -357,6 +371,10 @@ if __name__ == "__main__":
     NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     print(f"Number of GA runs: {NUM_RUNS}")
 
+    # --- batas waktu per run (fairness vs Tabu & OR-Tools) ---
+    TIME_LIMIT_PER_RUN = 10.0  # detik; silakan ubah kalau perlu
+    print(f"Time limit per GA run: {TIME_LIMIT_PER_RUN} seconds")
+
     # --- ukur waktu eksekusi multi_run ---
     start_time = time.perf_counter()
 
@@ -370,6 +388,7 @@ if __name__ == "__main__":
         use_two_opt=True,
         two_opt_prob=0.3,
         log_every=50,
+        time_limit_sec=TIME_LIMIT_PER_RUN,
     )
 
     end_time = time.perf_counter()

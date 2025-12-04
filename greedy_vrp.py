@@ -12,7 +12,6 @@ from parser import load_cvrp_instance
 # Instance file dari CLI
 # ---------------------------------------------------------
 INSTANCE_FILE = sys.argv[1] if len(sys.argv) > 1 else "output_cvrp.vrp"
-NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 
 # ---------------------------------------------------------
 # Load instance
@@ -25,6 +24,12 @@ DEPOT = 0
 # Baseline: Greedy Nearest Neighbor CVRP
 # ---------------------------------------------------------
 def greedy_vrp():
+    """
+    Konstruksi solusi CVRP dengan greedy nearest neighbor + capacity check.
+    Return:
+      - routes: list of routes (list of node visit including depot)
+      - cost  : total distance of all routes
+    """
     unvisited = set(range(1, N))
     routes = []
     total_cost = 0.0
@@ -35,7 +40,6 @@ def greedy_vrp():
         current = DEPOT
 
         while True:
-            # cari customer terdekat yang tidak melanggar kapasitas
             nearest = None
             best_dist = float("inf")
 
@@ -48,9 +52,8 @@ def greedy_vrp():
                     nearest = cust
 
             if nearest is None:
-                break  # harus kembali ke depot
+                break
 
-            # kunjungi customer
             route.append(nearest)
             load += DEMAND[nearest]
             unvisited.remove(nearest)
@@ -61,7 +64,7 @@ def greedy_vrp():
         routes.append(route)
 
         # hitung cost route ini
-        route_cost = 0
+        route_cost = 0.0
         for i in range(len(route) - 1):
             route_cost += DIST[route[i]][route[i+1]]
         total_cost += route_cost
@@ -70,7 +73,7 @@ def greedy_vrp():
 
 
 # ---------------------------------------------------------
-# Visualisasi route (lingkaran)
+# Visualisasi route (layout lingkaran)
 # ---------------------------------------------------------
 def plot_routes(routes: List[List[int]], filename: str, title: str):
     xs, ys = [], []
@@ -99,92 +102,68 @@ def plot_routes(routes: List[List[int]], filename: str, title: str):
 
 
 # ---------------------------------------------------------
-# Multi-run baseline greedy
-# ---------------------------------------------------------
-def multi_run_greedy(num_runs: int):
-    best = None
-    best_run_idx = None
-    costs = []
-    times = []
-
-    for r in range(num_runs):
-        print(f"\n=== GREEDY RUN {r+1}/{num_runs} ===")
-        start = time.perf_counter()
-        result = greedy_vrp()
-        end = time.perf_counter()
-
-        cost = result["cost"]
-        elapsed = end - start
-
-        print(f"Run {r+1}: cost={cost}, time={elapsed:.4f}s")
-
-        costs.append(cost)
-        times.append(elapsed)
-
-        if best is None or cost < best["cost"]:
-            best = {"routes": result["routes"], "cost": cost, "time": elapsed}
-            best_run_idx = r + 1
-
-    return best, costs, times, best_run_idx
-
-
-# ---------------------------------------------------------
 # Main Execution
 # ---------------------------------------------------------
 if __name__ == "__main__":
     print(f"Using instance file: {INSTANCE_FILE}")
-    print(f"Number of Greedy runs: {NUM_RUNS}")
 
-    best, costs, times, best_run_idx = multi_run_greedy(NUM_RUNS)
+    # --- run greedy once (deterministic) ---
+    start = time.perf_counter()
+    result = greedy_vrp()
+    end = time.perf_counter()
+    elapsed = end - start
 
-    best_cost = best["cost"]
-    best_time = best["time"]
-    avg_cost = sum(costs) / len(costs)
-    worst_cost = max(costs)
-    avg_time = sum(times) / len(times)
+    routes = result["routes"]
+    total_cost = result["cost"]
 
     print("\n=== GREEDY SUMMARY ===")
-    print(f"Best cost      : {best_cost}")
-    print(f"Best run index : {best_run_idx}")
-    print(f"Avg cost       : {avg_cost}")
-    print(f"Worst cost     : {worst_cost}")
-    print(f"Avg time (sec) : {avg_time:.4f}")
+    print(f"Total cost     : {total_cost:.2f}")
+    print(f"Num routes     : {len(routes)}")
+    print(f"Time (sec)     : {elapsed:.6f}")
 
-    # simpan CSV summary
+        # ---------- RINGKASAN SATU BARIS (GREEDY_SUMMARY) ----------
+    route_strings = ["-".join(str(n) for n in r) for r in routes]
+    final_route_str = "/".join(route_strings)
+
+    line_text = (
+        "GREEDY_SUMMARY|"
+        f"{INSTANCE_FILE}|"
+        f"{total_cost:.2f}|"
+        f"{len(routes)}|"
+        f"{CAPACITY}|"
+        f"{final_route_str}|"
+        f"{elapsed:.6f}"
+    )
+
+    print("\n" + line_text)
+
+
+    # ---------------------------------------------------------
+    # SIMPAN CSV SUMMARY
+    # ---------------------------------------------------------
     base_name = os.path.splitext(os.path.basename(INSTANCE_FILE))[0]
     summary_file = f"{base_name}_greedy_summary.csv"
     file_exists = os.path.exists(summary_file)
 
     header = [
         "instance_file",
-        "best_cost",
-        "avg_cost",
-        "worst_cost",
-        "num_runs",
-        "best_run",
+        "cost",
         "num_routes",
         "capacity",
-        "best_route",
-        "best_time_sec",
-        "avg_time_sec",
+        "route",
+        "time_sec",
     ]
 
-    best_routes = best["routes"]
-    route_strings = ["-".join(str(n) for n in r) for r in best_routes]
+    route_strings = ["-".join(str(n) for n in r) for r in routes]
     final_route_str = "/".join(route_strings)
 
     row = [
         INSTANCE_FILE,
-        f"{best_cost:.2f}",
-        f"{avg_cost:.2f}",
-        f"{worst_cost:.2f}",
-        str(NUM_RUNS),
-        str(best_run_idx),
-        str(len(best_routes)),
+        f"{total_cost:.2f}",
+        str(len(routes)),
         str(CAPACITY),
         final_route_str,
-        f"{best_time:.4f}",
-        f"{avg_time:.4f}",
+        f"{elapsed:.6f}",
     ]
 
     with open(summary_file, "a", newline="") as f:
@@ -193,6 +172,8 @@ if __name__ == "__main__":
             writer.writerow(header)
         writer.writerow(row)
 
-    # simpan plot
-    plot_routes(best_routes, f"{base_name}_greedy_route.png",
-                f"Greedy Best Route - {INSTANCE_FILE}")
+    # ---------------------------------------------------------
+    # SIMPAN PLOT RUTE
+    # ---------------------------------------------------------
+    plot_filename = f"{base_name}_greedy_route.png"
+    plot_routes(routes, plot_filename, f"Greedy Route - {INSTANCE_FILE}")

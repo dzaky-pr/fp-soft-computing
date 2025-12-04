@@ -1,2 +1,0 @@
-instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,best_seed,num_routes,num_nodes,num_customers,capacity,total_demand,best_route,chromosome,total_time_sec,avg_time_per_run_sec
-4_MochAlfian.vrp,22449.00,22478.00,22592.00,5,1,100,1,25,24,30.0,4.61,0-15-8-21-6-23-5-12-1-13-24-10-9-19-20-3-18-14-17-4-7-11-16-2-22-0,15-8-21-6-23-5-12-1-13-24-10-9-19-20-3-18-14-17-4-7-11-16-2-22,170.1961,34.0392

@@ -1,2 +1,0 @@
-instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,capacity,best_route,best_time_sec,avg_time_sec
-1_FaridFajar.vrp,21443.00,21443.00,21443.00,5,1,1,30.0,0-37-43-19-44-6-2-11-30-33-17-27-23-26-1-35-20-3-40-42-13-29-15-31-16-39-28-18-25-7-38-32-22-14-36-12-21-24-41-34-9-10-8-5-4-0,0.0001,0.0001

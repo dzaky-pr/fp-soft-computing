@@ -4,7 +4,7 @@ import csv
 import os
 import time
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import matplotlib.pyplot as plt
 
@@ -99,6 +99,7 @@ def tabu_search(
     tabu_tenure: int = 10,
     max_no_improve: int = 100,
     log_every: int = 50,
+    time_limit_sec: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Tabu Search sederhana dengan neighborhood berbasis SWAP antar dua customer.
@@ -106,7 +107,12 @@ def tabu_search(
     - Neighborhood: semua pasangan (i, j), i < j → swap posisi customer
     - Tabu list: pasangan customer (c1, c2) yang baru saja di-swap
     - Aspiration: move tabu boleh dipakai jika menghasilkan solusi global terbaik baru
+
+    Jika time_limit_sec tidak None, loop akan berhenti jika waktu per run
+    melebihi time_limit_sec (fairness vs GA & OR-Tools).
     """
+
+    start_time = time.perf_counter()
 
     current = random_chromosome()
     current_fitness = fitness(current)
@@ -124,6 +130,13 @@ def tabu_search(
 
     while it < max_iters and no_improve < max_no_improve:
         it += 1
+
+        # cek batas waktu per run
+        if time_limit_sec is not None:
+            elapsed = time.perf_counter() - start_time
+            if elapsed >= time_limit_sec:
+                print(f"[Tabu] Time limit reached at iteration {it}")
+                break
 
         best_candidate = None
         best_candidate_f = float("inf")
@@ -257,11 +270,13 @@ def analyze_solution(chromosome: List[int]):
 # --------------------------------------------------------------------
 # Multi-run untuk statistik Tabu Search
 # --------------------------------------------------------------------
-def multi_run_tabu(num_runs: int = 5, **ts_kwargs):
+def multi_run_tabu(num_runs: int = 5, time_limit_sec: Optional[float] = None, **ts_kwargs):
     """
     Jalankan Tabu Search berkali-kali (dengan seed berbeda) untuk lihat:
     - best fitness per run
     - best overall
+
+    time_limit_sec: batas waktu per run, diteruskan ke tabu_search
     """
     best_overall = None
     fitnesses = []
@@ -270,7 +285,7 @@ def multi_run_tabu(num_runs: int = 5, **ts_kwargs):
         seed = 200 + r
         random.seed(seed)
         print(f"\n=== TABU RUN {r+1}/{num_runs} (seed={seed}) ===")
-        best = tabu_search(**ts_kwargs)
+        best = tabu_search(time_limit_sec=time_limit_sec, **ts_kwargs)
         fitnesses.append(best["fitness"])
 
         if best_overall is None or best["fitness"] < best_overall["fitness"]:
@@ -303,6 +318,10 @@ if __name__ == "__main__":
     NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     print(f"Number of Tabu Search runs: {NUM_RUNS}")
 
+    # --- batas waktu per run (fairness vs GA & OR-Tools) ---
+    TIME_LIMIT_PER_RUN = 10.0  # detik; samakan dengan GA & OR-Tools
+    print(f"Time limit per Tabu run: {TIME_LIMIT_PER_RUN} seconds")
+
     # --- ukur waktu eksekusi multi_run_tabu ---
     start_time = time.perf_counter()
 
@@ -312,6 +331,7 @@ if __name__ == "__main__":
         tabu_tenure=10,
         max_no_improve=150,
         log_every=50,
+        time_limit_sec=TIME_LIMIT_PER_RUN,
     )
 
     end_time = time.perf_counter()

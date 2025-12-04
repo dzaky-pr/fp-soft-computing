@@ -151,7 +151,7 @@ def analyze_routes(routes: List[List[int]]):
         route_demand = sum(DEMAND[node] for node in r)
         route_cost = 0.0
         for i in range(len(r) - 1):
-            route_cost += DIST[r[i]][r[i + 1]]
+            route_cost += DIST[r[i]] [r[i + 1]]
 
         total_demand += route_demand
         total_cost += route_cost
@@ -181,6 +181,10 @@ if __name__ == "__main__":
     NUM_RUNS = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     print(f"Number of OR-Tools runs: {NUM_RUNS}")
 
+    # --- batas waktu per run (samakan dengan GA & Tabu) ---
+    TIME_LIMIT_PER_RUN = 10.0  # detik
+    print(f"Time limit per OR-Tools run: {TIME_LIMIT_PER_RUN} seconds")
+
     costs = []
     times = []
     best_result = None
@@ -189,7 +193,10 @@ if __name__ == "__main__":
     for r in range(NUM_RUNS):
         print(f"\n=== OR-TOOLS RUN {r+1}/{NUM_RUNS} ===")
         start_time = time.perf_counter()
-        result = solve_with_ortools(num_vehicles=1, time_limit_sec=30)
+        result = solve_with_ortools(
+            num_vehicles=1,
+            time_limit_sec=int(TIME_LIMIT_PER_RUN),
+        )
         end_time = time.perf_counter()
         solve_time_sec = end_time - start_time
 
@@ -224,7 +231,7 @@ if __name__ == "__main__":
     avg_solve_time = sum(times) / len(times)
 
     print("\n=== OR-TOOLS BEST RUN ===")
-    print(f"Instance: {INSTANCE_FILE}")
+    print("Instance:", INSTANCE_FILE)
     print(f"Best cost      : {best_cost}")
     print(f"Best run index : {best_run_idx}")
     print(f"Best solve time: {best_solve_time:.4f} s")

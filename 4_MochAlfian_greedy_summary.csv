@@ -1,2 +1,0 @@
-instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,capacity,best_route,best_time_sec,avg_time_sec
-4_MochAlfian.vrp,25837.00,25837.00,25837.00,5,1,1,30.0,0-23-15-11-4-7-16-2-22-6-14-17-5-12-10-19-20-18-1-13-24-9-3-8-21-0,0.0000,0.0000
