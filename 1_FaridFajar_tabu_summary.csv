@@ -1,0 +1,2 @@
+instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,best_seed,num_routes,num_nodes,num_customers,capacity,total_demand,best_route,chromosome,total_time_sec,avg_time_per_run_sec
+1_FaridFajar.vrp,25413.00,26944.80,27793.00,5,3,202,1,45,44,30.0,3.91,0-14-41-36-12-17-26-1-25-38-22-32-19-44-43-37-2-11-6-5-4-8-10-16-31-34-9-21-24-33-30-35-20-3-27-23-7-39-28-40-42-13-29-15-18-0,14-41-36-12-17-26-1-25-38-22-32-19-44-43-37-2-11-6-5-4-8-10-16-31-34-9-21-24-33-30-35-20-3-27-23-7-39-28-40-42-13-29-15-18,9.2434,1.8487

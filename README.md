@@ -1,10 +1,11 @@
 # CVRP Solver
 
-Proyek ini menyediakan implementasi untuk menyelesaikan **Capacitated Vehicle Routing Problem (CVRP)** menggunakan tiga pendekatan utama:
+Proyek ini menyediakan implementasi untuk menyelesaikan **Capacitated Vehicle Routing Problem (CVRP)** menggunakan beberapa pendekatan utama:
 
 1. **Genetic Algorithm (GA)** - Pendekatan heuristik berbasis evolusi
 2. **Greedy (Nearest Neighbor)** - Baseline heuristik sederhana
-3. **Google OR-Tools** - Solver optimasi komersial
+3. **Tabu Search** - Metaheuristik lokal dengan memori (tabu list)
+4. **Google OR-Tools** - Solver optimasi komersial
 
 ## Deskripsi Proyek
 
@@ -15,8 +16,8 @@ Capacitated Vehicle Routing Problem (CVRP) adalah masalah optimasi kombinatorial
 - **parser.py**: Parser untuk membaca file instance CVRP (.vrp format)
 - **ga_vrp.py**: Implementasi Genetic Algorithm untuk CVRP
 - **greedy_vrp.py**: Implementasi Greedy baseline (Nearest Neighbor)
+- **tabu_vrp.py**: Implementasi Tabu Search untuk CVRP
 - **ortools_solver.py**: Solver menggunakan Google OR-Tools
-- **File instance**: Contoh instance CVRP (1_FaridFajar.vrp, dll.)
 
 ## Instalasi
 
@@ -109,6 +110,18 @@ Contoh:
 python greedy_vrp.py 1_FaridFajar.vrp 5
 ```
 
+### Menjalankan Tabu Search
+
+```bash
+python tabu_vrp.py [nama_file_instance.vrp] [num_runs]
+```
+
+Contoh:
+
+```bash
+python tabu_vrp.py 1_FaridFajar.vrp 5
+```
+
 ## Output
 
 ### Genetic Algorithm
@@ -146,17 +159,19 @@ Catatan: Berbeda dari GA/OR-Tools, skrip `greedy_vrp.py` tidak mencetak single-l
 ## Struktur File
 
 ```
+
 cv-rp-solver/
-├── parser.py              # Parser untuk file .vrp
-├── ga_vrp.py             # Implementasi Genetic Algorithm
-├── greedy_vrp.py         # Implementasi Greedy baseline
-├── ortools_solver.py     # Solver OR-Tools
-├── requirements.txt      # Dependencies Python
-├── README.md             # Dokumentasi ini
-├── 1_FaridFajar.vrp      # Instance contoh 1
-├── 2_WahyuDwi.vrp        # Instance contoh 2
-├── 3_ChabibMaulana.vrp   # Instance contoh 3
-└── 4_MochAlfian.vrp      # Instance contoh 4
+├── parser.py # Parser untuk file .vrp
+├── ga_vrp.py # Implementasi Genetic Algorithm
+├── greedy_vrp.py # Implementasi Greedy baseline
+├── ortools_solver.py # Solver OR-Tools
+├── requirements.txt # Dependencies Python
+├── README.md # Dokumentasi ini
+├── 1_FaridFajar.vrp # Instance contoh 1
+├── 2_WahyuDwi.vrp # Instance contoh 2
+├── 3_ChabibMaulana.vrp # Instance contoh 3
+└── 4_MochAlfian.vrp # Instance contoh 4
+
 ```
 
 ## Contoh Output
@@ -164,6 +179,7 @@ cv-rp-solver/
 ### Genetic Algorithm
 
 ```
+
 Gen 50: best fitness = 15423.5
 Gen 100: best fitness = 14876.2
 ...
@@ -174,11 +190,13 @@ Routes: 3 vehicles
 Route 1: 0 -> 5 -> 12 -> 8 -> 0 (demand: 28.0/30.0, cost: 4567.2)
 ...
 GA_SUMMARY|1_FaridFajar.vrp|14234.80|15234.50|16543.20|5|3|142|3|45|44|30.00|120.50|0-5-12-8-0/0-2-15-0/0-7-22-0|5-12-8-15-2-7-22|12.3456|2.4691
+
 ```
 
 ### OR-Tools
 
 ```
+
 === OR-TOOLS RESULT ===
 Instance: 1_FaridFajar.vrp
 Objective (total distance): 13892.4
@@ -186,6 +204,7 @@ Routes: 3 vehicles
 Route 1: 0 -> 3 -> 9 -> 14 -> 0 (demand: 29.5/30.0, cost: 4234.1)
 ...
 ORTOOLS_SUMMARY|1_FaridFajar.vrp|13892.40|13892.40|13892.40|1|1|3|45|44|30.00|118.20|0-3-9-14-0/0-1-6-11-0/0-4-13-0|0.3456|0.3456
+
 ```
 
 ### Greedy
@@ -228,6 +247,19 @@ instance_file,best_cost,avg_cost,worst_cost,num_runs,best_run,num_routes,capacit
 1. **Heuristics**: Mencari customer terdekat yang masih dapat dimasukkan ke rute tanpa melanggar kapasitas.
 2. **Decoding**: Rute akan berakhir di depot ketika tidak ada customer tersisa yang dapat dimasukkan ke rute saat ini.
 
+### Tabu Search
+
+1. **Representasi**: Permutasi pelanggan (customers) seperti GA.
+2. **Decoding**: Mengubah permutasi menjadi rute kendaraan dengan mempertimbangkan kapasitas (fungsi `decode_routes` yang sama dengan GA).
+3. **Fungsi tujuan**: Total jarak + penalti kapasitas (jika ada overload).
+4. **Neighborhood**: Semua solusi yang diperoleh dengan **swap** dua customer pada kromosom.
+5. **Tabu list**:
+   - Menyimpan pasangan customer yang baru saja di-swap.
+   - Move tabu tidak boleh dipakai sampai tenure habis, kecuali memenuhi **aspiration** (memberi solusi global terbaik baru).
+6. **Kriteria stop**:
+   - Mencapai `max_iters`, atau
+   - Tidak ada perbaikan selama `max_no_improve` iterasi.
+
 ### OR-Tools
 
 Menggunakan constraint programming solver dari Google dengan:
@@ -250,3 +282,7 @@ Untuk membandingkan performa ketiga metode (GA, Greedy, dan OR-Tools):
 - OR-Tools Documentation: https://developers.google.com/optimization
 - CVRP Benchmark Instances: http://vrp.atd-lab.inf.puc-rio.br/index.php/en/
 - Genetic Algorithm for VRP: Literatur akademik terkait
+
+```
+
+```
