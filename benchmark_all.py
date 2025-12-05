@@ -2,7 +2,7 @@
 """
 benchmark_all.py
 
-Jalankan Greedy, GA, Tabu Search, dan OR-Tools
+Jalankan Greedy, GA, Tabu Search, OR-Tools, dan Simulated Annealing (SA)
 untuk semua instance .vrp, lalu gabungkan hasilnya
 ke dalam satu file CSV: benchmark_summary.csv
 """
@@ -27,7 +27,7 @@ INSTANCE_FILES = [
 GA_RUNS = 5          # jumlah run GA per instance
 TABU_RUNS = 5        # jumlah run Tabu per instance
 ORTOOLS_RUNS = 1     # OR-Tools deterministik → cukup 1
-
+SA_RUNS = 5          # jumlah run Simulated Annealing per instance
 
 # ----------------------------------------------------------------------
 # Helper untuk menjalankan command dan menangkap stdout
@@ -205,6 +205,53 @@ def main():
                 writer.writerow([
                     instance_file,
                     "Tabu",
+                    float(best_cost),
+                    float(avg_cost),
+                    float(worst_cost),
+                    int(num_runs),
+                    int(best_run),
+                    best_seed,
+                    int(num_routes),
+                    int(num_nodes),
+                    int(num_customers),
+                    float(capacity_str),
+                    float(total_dem_str),
+                    best_route_str,
+                    chrom_str,
+                    float(total_time_str),
+                    float(avg_time_str),
+                ])
+
+            # ------------------ SA (Simulated Annealing) ------------------
+            out = run_and_capture([sys.executable, "sa_vrp.py", inst, str(SA_RUNS)])
+            line = find_line_with_prefix(out, "SA_SUMMARY|")
+            if line is None:
+                print(f"[WARN] SA_SUMMARY tidak ditemukan untuk {inst}", file=sys.stderr)
+            else:
+                parts = line.split("|")
+                (
+                    _tag,
+                    instance_file,
+                    best_cost,
+                    avg_cost,
+                    worst_cost,
+                    num_runs,
+                    best_run,
+                    best_seed,
+                    num_routes,
+                    num_nodes,
+                    num_customers,
+                    capacity_str,
+                    total_dem_str,
+                    best_route_str,
+                    chrom_str,
+                    total_time_str,
+                    avg_time_str,
+                ) = parts
+
+                writer.writerow([
+                    instance_file,
+                    "SA",                    # Nama Algoritma
                     float(best_cost),
                     float(avg_cost),
                     float(worst_cost),
